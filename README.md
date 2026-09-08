@@ -9,7 +9,9 @@
 | | |
 |---|---|
 | OS | Windows 11（x64） |
-| SDK | .NET 10 SDK — バージョンは [global.json](global.json) で `10.0.400` に固定 |
+| SDK | .NET 10 SDK — [global.json](global.json) が下限として `10.0.400` を指定 |
+
+[global.json](global.json) の `rollForward` は `latestFeature` なので、これは固定ではなく下限です。より新しいフィーチャーバンド（`10.0.5xx` など）が入っていればそちらが使われます。厳密に揃える必要が出たときは `rollForward` を `disable` か `patch` に変更してください。
 
 Windows App SDK は NuGet 経由で復元されるため、別途インストールは不要です。x64 専用で、他のアーキテクチャ向けの構成はありません。
 
