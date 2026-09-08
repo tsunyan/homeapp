@@ -1,0 +1,45 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # CodeQL's query packs update independently of this repository's own
+    # commits, so a weekly run catches a newly published query finding
+    # something in code that has not changed.
+    - cron: "17 3 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    # C# analysis observes a real build, and this project is WinUI 3 /
+    # Windows App SDK, so it cannot run on the ubuntu runner used elsewhere.
+    runs-on: windows-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - uses: github/codeql-action/init@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+        with:
+          languages: csharp
+          build-mode: manual
+
+      # A manual build is required: autobuild cannot pick the RID this project
+      # needs, and the XAML markup compiler must run for the generated
+      # code-behind to be part of the analysed assembly.
+      - name: Build
+        run: |
+          dotnet restore src/HomeApp/HomeApp.csproj -r win-x64
+          dotnet build src/HomeApp/HomeApp.csproj -c Release -r win-x64 --no-restore
+
+      - uses: github/codeql-action/analyze@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
