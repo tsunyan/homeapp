@@ -25,7 +25,8 @@ The type is the same set both conventions use:
 | `refactor` | A change that alters no behaviour |
 | `test` | Tests only |
 | `ci` | Workflows, branch protection, repository configuration |
-| `chore` | Everything else — dependencies, tooling, housekeeping |
+| `build` | The build itself and its dependencies — the type Dependabot writes as `build(deps)` |
+| `chore` | Housekeeping that fits none of the above |
 
 - **Use a noun phrase, not a verb phrase.** `feat/widget-inspector`, not `feat/add-widget-inspector`.
   The branch names what the work is about; its commits say what it does.
