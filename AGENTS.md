@@ -1,3 +1,29 @@
+## Branch names
+
+`<type>/<kebab-case-noun-phrase>` (examples: `feat/widget-inspector`, `fix/xaml-markup-pass`, `ci/codeql-csharp`)
+
+The type is one of:
+
+| Type | For |
+|---|---|
+| `feat` | New behaviour a user can see |
+| `fix` | A defect in existing behaviour |
+| `docs` | Documentation only |
+| `refactor` | A change that alters no behaviour |
+| `test` | Tests only |
+| `ci` | Workflows, branch protection, repository configuration |
+| `chore` | Everything else — dependencies, tooling, housekeeping |
+
+- **Use a noun phrase, not a verb phrase.** `feat/widget-inspector`, not `feat/add-widget-inspector`.
+  The branch names what the work is about; its commits say what it does.
+- **Do not prefix a branch with the name of the agent or person who created it.** Git already records the
+  author, and a branch normally outlives whoever opened it — a review and its fixes often land on the branch
+  that first carried the implementation.
+- Branches Dependabot opens are outside this convention.
+
+`main` is protected: it takes no direct pushes, and every change arrives through a pull request whose
+`build`, `secrets` and `analyze` checks pass. See the CI section of [README.md](README.md).
+
 <!-- graft:start -->
 ## Graft — repo context graph
 
