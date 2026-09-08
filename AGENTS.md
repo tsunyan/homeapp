@@ -1,8 +1,21 @@
+## Commit messages
+
+`<type>: <summary>` (examples: `feat: add the widget inspector`, `fix: qualify Path against the Shapes namespace`)
+
+- **English, imperative mood, lower case after the colon, no trailing period.**
+- One line for the summary, specific enough to be worth reading in `git log --oneline`.
+- A scope is optional and rarely needed. `build(deps):` is what Dependabot writes.
+- A breaking change takes `!` before the colon — `feat!: ...` — and says what breaks in the body.
+- **The body says why, not what.** The diff already shows what changed; the body carries the reason, the
+  constraint, or the finding that made the change necessary. Wrap it at about 80 columns.
+- **Commits made before this convention existed stay as they are.** Do not rewrite published history to
+  retrofit it.
+
 ## Branch names
 
 `<type>/<kebab-case-noun-phrase>` (examples: `feat/widget-inspector`, `fix/xaml-markup-pass`, `ci/codeql-csharp`)
 
-The type is one of:
+The type is the same set both conventions use:
 
 | Type | For |
 |---|---|
@@ -12,7 +25,8 @@ The type is one of:
 | `refactor` | A change that alters no behaviour |
 | `test` | Tests only |
 | `ci` | Workflows, branch protection, repository configuration |
-| `chore` | Everything else — dependencies, tooling, housekeeping |
+| `build` | The build itself and its dependencies — the type Dependabot writes as `build(deps)` |
+| `chore` | Housekeeping that fits none of the above |
 
 - **Use a noun phrase, not a verb phrase.** `feat/widget-inspector`, not `feat/add-widget-inspector`.
   The branch names what the work is about; its commits say what it does.
