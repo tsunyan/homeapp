@@ -56,8 +56,14 @@ jobs:
       - name: Test
         shell: pwsh
         run: |
-          $projects = Get-ChildItem -Path . -Filter *.csproj -Recurse |
-            Where-Object { $_.FullName -notmatch '\(bin|obj)\' -and $_.BaseName -match 'Tests?$' }
+          # Split on the platform separator rather than matching a regex: a
+          # backslash character class is easy to mangle in transit, and the
+          # mistake only surfaces once a test project actually exists.
+          $sep = [System.IO.Path]::DirectorySeparatorChar
+          $projects = Get-ChildItem -Path . -Filter *.csproj -Recurse | Where-Object {
+            $parts = $_.FullName.Split($sep)
+            $parts -notcontains 'bin' -and $parts -notcontains 'obj' -and $_.BaseName -match 'Tests?$'
+          }
           if (-not $projects) {
             Write-Host 'No test projects found - skipping.'
             exit 0
