@@ -16,6 +16,12 @@ Windows App SDK は NuGet 経由で復元されるため、別途インストー
 ## ビルド
 
 ```bash
+dotnet build src/HomeApp/HomeApp.csproj -c Release -r win-x64
+```
+
+これ1つで復元も走ります。CI は復元を別ステップに分けているので、同じ手順を手元で再現したい場合のみ次の2つを順に実行してください（`--no-restore` は事前の復元が前提です）。
+
+```bash
 dotnet restore src/HomeApp/HomeApp.csproj -r win-x64
 ```
 
