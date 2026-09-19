@@ -18,5 +18,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\HomeApp.Core\HomeApp.Core.csproj" />
+    <ProjectReference Include="..\..\src\HomeApp.Google\HomeApp.Google.csproj" />
   </ItemGroup>
 </Project>

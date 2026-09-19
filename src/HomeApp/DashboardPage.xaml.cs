@@ -33,6 +33,7 @@ public sealed partial class DashboardPage : Page
         // Qualified: Microsoft.UI.Xaml.Shapes.Path is also in scope here.
         _store = new WorkspaceStore(System.IO.Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HomeApp"));
+        _google = new(new Services.EncryptedGoogleStore(System.IO.Path.Combine(_store.DirectoryPath, "GoogleAuth")));
         var loaded = _store.Load();
         _state = loaded.State;
         _pendingWarning = loaded.Warning;
@@ -53,7 +54,7 @@ public sealed partial class DashboardPage : Page
 
     private BoardState Board => _state.ActiveBoard;
 
-    private void OnLoaded(object sender, RoutedEventArgs e)
+    private async void OnLoaded(object sender, RoutedEventArgs e)
     {
         BuildNavigation();
         ApplyTheme();
@@ -64,6 +65,7 @@ public sealed partial class DashboardPage : Page
             Notify(_pendingWarning, InfoBarSeverity.Warning);
             _pendingWarning = null;
         }
+        await RestoreGoogleAsync();
     }
 
     private void Notify(string message, InfoBarSeverity severity = InfoBarSeverity.Informational)
@@ -202,6 +204,10 @@ public sealed partial class DashboardPage : Page
         frame.NoteChanged += (_, _) => QueueSave();
         frame.DetailRequested += async (_, entry) => await ShowDetailAsync(entry);
         frame.JsonEditRequested += async (s, _) => await EditJsonAsync((WidgetFrame)s!);
+        frame.RssSettingsRequested += async (s, _) => await EditRssAsync((WidgetFrame)s!);
+        frame.ConnectionRequested += async (_, _) => await ShowGoogleConnectionAsync();
+        frame.ConnectedDetailRequested += async (_, detail) => await ShowConnectedDetailAsync(detail);
+        frame.SetProviders(_google.Provider, _google.Provider);
         frame.SetEditing(EditButton.IsChecked == true, false);
         BoardCanvas.Children.Add(frame);
         _frames[widget.Id] = frame;
@@ -524,11 +530,18 @@ public sealed partial class DashboardPage : Page
         panel.Children.Add(theme);
         panel.Children.Add(density);
         panel.Children.Add(grid);
+        var connection = new Button { Content = "Google接続設定" };
+        panel.Children.Add(connection);
 
         // The settings item is not a board; leave the board selection where it was.
         SelectActiveBoardItem();
 
-        if (await NewDialog("表示設定", panel, "適用").ShowAsync() != ContentDialogResult.Primary) return;
+        var dialog = NewDialog("表示設定", panel, "適用");
+        var openConnection = false;
+        connection.Click += (_, _) => { openConnection = true; dialog.Hide(); };
+        var result = await dialog.ShowAsync();
+        if (openConnection) { await ShowGoogleConnectionAsync(); return; }
+        if (result != ContentDialogResult.Primary) return;
 
         _state.Theme = (AppTheme)theme.SelectedIndex;
         _state.Density = (DisplayDensity)density.SelectedIndex;

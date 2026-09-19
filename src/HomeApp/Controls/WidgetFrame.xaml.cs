@@ -14,6 +14,8 @@ public sealed partial class WidgetFrame : UserControl
 {
     private TextBlock? _time;
     private TextBlock? _date;
+    private bool _calendarMonthView = true;
+    private DateTimeOffset _calendarDate = DateTimeOffset.Now;
     private Point _startPoint;
     private WidgetState? _startGeometry;
     private bool _resizing;
@@ -43,6 +45,7 @@ public sealed partial class WidgetFrame : UserControl
         WidgetIcon.Glyph = SampleData.Glyph(model.Kind);
         RefreshGeometry();
         RefreshContent();
+        Unloaded += (_, _) => CancelContentRequest();
         MoveHandle.PointerEntered += (_, _) => { if (IsEditing) ProtectedCursor = InputSystemCursor.Create(InputSystemCursorShape.SizeAll); };
         MoveHandle.PointerExited += (_, _) => ProtectedCursor = null;
         ResizeHandle.PointerEntered += (_, _) => ProtectedCursor = InputSystemCursor.Create(InputSystemCursorShape.SizeNorthwestSoutheast);
@@ -84,6 +87,7 @@ public sealed partial class WidgetFrame : UserControl
 
     public void RefreshContent()
     {
+        CancelContentRequest();
         TitleText.Text = Model.Title;
         StatusText.Text = SampleData.IsSample(Model.Kind) ? "サンプルデータ · 未接続" : Model.Kind == WidgetKind.Clock ? "このPCの時刻" : "このPCに保存";
         _time = null;
@@ -92,9 +96,9 @@ public sealed partial class WidgetFrame : UserControl
         {
             WidgetKind.Clock => BuildClock(),
             WidgetKind.Calendar => BuildCalendar(),
-            WidgetKind.Mail => BuildEntries(SampleData.Mail, "受信トレイ", "3 件", true),
+            WidgetKind.Mail => BuildMail(),
             WidgetKind.Notifications => BuildEntries(SampleData.Notifications, "最近のお知らせ", "3 件"),
-            WidgetKind.Rss => BuildEntries(SampleData.Rss, "今日の読みもの", "3 件"),
+            WidgetKind.Rss => BuildRss(),
             WidgetKind.Json => BuildJson(),
             _ => BuildNote()
         };
@@ -131,13 +135,77 @@ public sealed partial class WidgetFrame : UserControl
         var grid = new Grid { RowSpacing = Spacing };
         grid.RowDefinitions.Add(new() { Height = GridLength.Auto });
         grid.RowDefinitions.Add(new() { Height = new(1, GridUnitType.Star) });
-        var picker = new CalendarDatePicker { Date = DateTimeOffset.Now, HorizontalAlignment = HorizontalAlignment.Stretch, DateFormat = "{}{month.full} {day.integer}日" };
+        var mode = new ComboBox
+        {
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            ItemsSource = new[] { "月表示", "予定一覧" },
+            SelectedIndex = _calendarMonthView ? 0 : 1
+        };
+        AutomationProperties.SetName(mode, "カレンダーの表示形式");
+        grid.Children.Add(mode);
+        var content = new StackPanel { Spacing = Spacing };
+        var scroll = new ScrollViewer { Content = content, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+        Grid.SetRow(scroll, 1);
+        grid.Children.Add(scroll);
+        var picker = new CalendarDatePicker { Date = _calendarDate, HorizontalAlignment = HorizontalAlignment.Stretch };
         AutomationProperties.SetName(picker, "予定を表示する日");
-        grid.Children.Add(picker);
-        var list = EntryList(SampleData.Calendar, true);
-        Grid.SetRow(list, 1);
-        grid.Children.Add(list);
-        picker.DateChanged += (_, _) => StatusText.Text = $"{picker.Date?.ToString("M月d日") ?? "日付未選択"}の表示例 · サンプルデータ";
+        content.Children.Add(picker);
+        var agenda = new ContentControl { MinHeight = 90, MaxHeight = 240, HorizontalContentAlignment = HorizontalAlignment.Stretch };
+        var calendar = new CalendarView
+        {
+            SelectionMode = CalendarViewSelectionMode.Single,
+            DisplayMode = CalendarViewDisplayMode.Month,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            MinWidth = 0,
+            Height = 300
+        };
+        AutomationProperties.SetName(calendar, "月表示カレンダー");
+        calendar.SetDisplayDate(_calendarDate);
+        calendar.SelectedDates.Add(_calendarDate);
+        content.Children.Add(calendar);
+        var selectedDay = Text($"{_calendarDate:M月d日}の予定", 12, true);
+        content.Children.Add(selectedDay);
+        var refresh = new Button { Content = "予定を更新" };
+        refresh.Click += async (_, _) => await LoadCalendarAsync(agenda, _calendarDate);
+        content.Children.Add(refresh);
+        content.Children.Add(agenda);
+        agenda.Loaded += async (_, _) => await LoadCalendarAsync(agenda, _calendarDate);
+        void UpdateMode()
+        {
+            calendar.Visibility = _calendarMonthView ? Visibility.Visible : Visibility.Collapsed;
+            picker.Visibility = _calendarMonthView ? Visibility.Collapsed : Visibility.Visible;
+        }
+        async Task UpdateDateAsync(DateTimeOffset date)
+        {
+            if (_calendarDate.Date == date.Date) return;
+            _calendarDate = date;
+            selectedDay.Text = $"{date:M月d日}の予定";
+            await LoadCalendarAsync(agenda, date);
+        }
+        picker.DateChanged += async (_, _) =>
+        {
+            if (picker.Date is not { } date) return;
+            if (calendar.SelectedDates.Count != 1 || calendar.SelectedDates[0].Date != date.Date)
+            {
+                calendar.SelectedDates.Clear();
+                calendar.SelectedDates.Add(date);
+                calendar.SetDisplayDate(date);
+            }
+            await UpdateDateAsync(date);
+        };
+        calendar.SelectedDatesChanged += async (_, args) =>
+        {
+            if (args.AddedDates.Count == 0) return;
+            var date = args.AddedDates[0];
+            picker.Date = date;
+            await UpdateDateAsync(date);
+        };
+        mode.SelectionChanged += (_, _) =>
+        {
+            _calendarMonthView = mode.SelectedIndex == 0;
+            UpdateMode();
+        };
+        UpdateMode();
         return grid;
     }
 
