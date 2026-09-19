@@ -97,7 +97,7 @@ public sealed partial class WidgetFrame : UserControl
             WidgetKind.Clock => BuildClock(),
             WidgetKind.Calendar => BuildCalendar(),
             WidgetKind.Mail => BuildMail(),
-            WidgetKind.Notifications => BuildEntries(SampleData.Notifications, "最近のお知らせ", "3 件"),
+            WidgetKind.Notifications => BuildNotifications(),
             WidgetKind.Rss => BuildRss(),
             WidgetKind.Json => BuildJson(),
             _ => BuildNote()

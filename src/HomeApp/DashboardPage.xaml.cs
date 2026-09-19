@@ -31,8 +31,7 @@ public sealed partial class DashboardPage : Page
         InitializeComponent();
 
         // Qualified: Microsoft.UI.Xaml.Shapes.Path is also in scope here.
-        _store = new WorkspaceStore(System.IO.Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HomeApp"));
+        _store = new WorkspaceStore(Services.AppDataPaths.WorkspaceDirectory);
         _google = new(new Services.EncryptedGoogleStore(System.IO.Path.Combine(_store.DirectoryPath, "GoogleAuth")));
         var loaded = _store.Load();
         _state = loaded.State;
