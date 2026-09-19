@@ -141,7 +141,7 @@ public static class LayoutMath
 
     public static void InitialLayout(BoardState board, double availableWidth)
     {
-        var columns = Math.Clamp((int)(availableWidth / 360), 1, 5);
+        var columns = Math.Clamp((int)(availableWidth / 360), 1, 8);
         var width = Math.Clamp((availableWidth - 16 * (columns + 1)) / columns, 280, 520);
         var bottoms = new double[columns];
         Array.Fill(bottoms, 16);

@@ -225,10 +225,20 @@ public sealed partial class DashboardPage : Page
         if (!_state.ShowGrid || EditButton.IsChecked != true) return;
 
         var brush = (Brush)Application.Current.Resources["DividerStrokeColorDefaultBrush"];
-        for (var x = _state.GridSize; x < width; x += _state.GridSize)
-            GridLines.Children.Add(new Line { X1 = x, Y1 = 0, X2 = x, Y2 = height, Stroke = brush, StrokeThickness = .5, Opacity = .4 });
-        for (var y = _state.GridSize; y < height; y += _state.GridSize)
-            GridLines.Children.Add(new Line { X1 = 0, Y1 = y, X2 = width, Y2 = y, Stroke = brush, StrokeThickness = .5, Opacity = .4 });
+        var zoom = LayoutMath.ClampFinite(Viewport.ZoomFactor, .35, 2, 1);
+        var left = Math.Max(0, Viewport.HorizontalOffset / zoom);
+        var top = Math.Max(0, Viewport.VerticalOffset / zoom);
+        var right = Math.Min(width, left + Viewport.ActualWidth / zoom + _state.GridSize);
+        var bottom = Math.Min(height, top + Viewport.ActualHeight / zoom + _state.GridSize);
+        var firstX = Math.Max(_state.GridSize, Math.Floor(left / _state.GridSize) * _state.GridSize);
+        var firstY = Math.Max(_state.GridSize, Math.Floor(top / _state.GridSize) * _state.GridSize);
+
+        // Only draw the visible grid. A widget may live far across the free-form board,
+        // and materializing thousands of off-screen Line elements would stall editing.
+        for (var x = firstX; x < right; x += _state.GridSize)
+            GridLines.Children.Add(new Line { X1 = x, Y1 = top, X2 = x, Y2 = bottom, Stroke = brush, StrokeThickness = .5, Opacity = .4 });
+        for (var y = firstY; y < bottom; y += _state.GridSize)
+            GridLines.Children.Add(new Line { X1 = left, Y1 = y, X2 = right, Y2 = y, Stroke = brush, StrokeThickness = .5, Opacity = .4 });
     }
 
     // ---- selection and inspector ----
@@ -236,7 +246,12 @@ public sealed partial class DashboardPage : Page
     private void Select(WidgetFrame frame)
     {
         _selected = frame;
-        foreach (var other in _frames.Values) other.SetEditing(EditButton.IsChecked == true, other == frame);
+        foreach (var other in _frames.Values)
+        {
+            var selected = other == frame;
+            other.SetEditing(EditButton.IsChecked == true, selected);
+            Canvas.SetZIndex(other, selected ? 1 : 0);
+        }
         SyncInspector(frame);
         InspectorSplit.IsPaneOpen = true;
     }

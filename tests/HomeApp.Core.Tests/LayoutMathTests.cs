@@ -79,4 +79,18 @@ public sealed class LayoutMathTests
         Assert.Equal(4, board.Widgets.Select(widget => widget.X).Distinct().Count());
         Assert.All(board.Widgets, widget => Assert.InRange(widget.X + widget.Width, 0, 1_600));
     }
+
+    [Fact]
+    public void InitialLayout_UsesAvailableSpaceAt4K()
+    {
+        var board = new BoardState
+        {
+            Widgets = Enumerable.Range(0, 7).Select(_ => SampleData.Create(WidgetKind.Note)).ToList()
+        };
+
+        LayoutMath.InitialLayout(board, 3_840);
+
+        Assert.Equal(7, board.Widgets.Select(widget => widget.X).Distinct().Count());
+        Assert.All(board.Widgets, widget => Assert.InRange(widget.X + widget.Width, 0, 3_840));
+    }
 }
