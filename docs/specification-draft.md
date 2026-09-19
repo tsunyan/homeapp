@@ -223,7 +223,7 @@ Widgetは表示方法と表示条件を持ち、Providerは認証・通信・デ
 
 Microsoftの公式手順では、manifestの`userNotificationListener` capabilityと明示的な利用許可が必要とされる。権限撤回で空の結果が返る場合もあるため、取得結果だけで権限状態を判断しない。[Microsoft: Notification listener](https://learn.microsoft.com/en-us/windows/apps/develop/notifications/app-notifications/notification-listener)、[Microsoft: capability schema](https://learn.microsoft.com/en-us/uwp/schemas/appxpackage/uapmanifestschema/element-uap3-capability)
 
-WinUI 3アプリからWindows Runtime APIを利用する構成と、必要なパッケージID・manifest capabilityをPoCで確定する。プロトタイプの通知ウィジェットはサンプル表示のみであり、通知アクセス権限を要求しない。
+実装済みの通知ウィジェットは、WinUI 3からWindows Runtimeの`UserNotificationListener`を利用し、通知センターに残る最新50件を15秒ごとに取得する。利用にはパッケージIDの登録、manifestの`userNotificationListener` capability、利用者による通知アクセスの許可が必要である。許可要求は「通知へのアクセスを許可」ボタンを押した場合にのみ行う。未登録・未許可の場合は案内を表示し、通知内容は保存・外部送信しない。ローカル開発用の登録手順は[Windows通知ガイド](windows-notifications.md)を参照する。署名・インストーラーを含む配布構成の検証は引き続き必要である。
 
 ### 7.5 F-06 RSS
 
