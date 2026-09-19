@@ -44,22 +44,21 @@ The type is the same set both conventions use:
 This repo is indexed in `graft/`: small linked markdown nodes that explain each
 system and carry exact file:line spans, kept in sync with the code through git.
 
-For ANY task here — understanding how something works, finding where code lives,
-or scoping a change — get context from the graph before grepping or opening
-source files. Re-ask freely (it's cheap) and reuse literal identifiers you
-already have (symbol, error string, file name) as the query. New to this repo?
-Run `graft map` first — a token-budgeted orientation (dir clusters, hubs,
-hotspots), no LLM, no key.
+Use the graph when locating code, understanding architecture, or assessing a change's
+impact. For known-file edits, typos, configuration audits, and tasks unrelated to
+indexed code, read the relevant file directly. Use `graft map` only when broad
+repository orientation is needed. Choose one query that fits the task; if it returns
+unrelated results, use `rg` on the relevant files instead of repeating the query.
 
 - Run `graft ask "<your question>" --source` → ranked nodes with the relevant
   code spans inlined (each hit's ≤8-line crux by default; `--full` for whole
   definitions when the crux isn't enough). Match the tool to the task shape:
-  for understanding or editing, the top node IS the answer — cite its
+  for understanding or editing, verify that the ranked node fits the task; use its
   `covers:` file:line spans and edit straight from `--source`. For
   exhaustive tasks ("every occurrence / every caller of this pattern"), ranked
   results are top-N, not complete — run `graft grep "<literal>"` instead
   (exhaustive over indexed files, grouped by enclosing symbol), falling back
-  to raw `grep -rn` only for unindexed files.
+  to `rg` for unindexed files or irrelevant graph results.
 - `graft skeleton <file>` → every definition's signature + span, ~10× cheaper
   than reading the file; use it to skim an API surface.
 - `graft callers <symbol>` gives precomputed, exact edges — who calls this.
@@ -71,10 +70,9 @@ hotspots), no LLM, no key.
   hits carry `[scope/]` labels naming which one they're from. Narrow with
   `graft ask "<task>" --in <scope>/` once you know where you're working.
 
-If a returned span is truncated ("+N more lines"), open the file at that exact
-range before finalizing. Only open source files when a node genuinely lacks a
-needed detail, and then at the exact file:line the node points to — never
-re-read whole files.
+When relying on a truncated graph span, read the needed definition before editing
+or making claims about it. Prefer focused reads, while allowing direct reads for
+known-file tasks and files outside the graph.
 
 After big code changes, refresh the graph with `graft build` (deterministic,
 no API key, $0).
