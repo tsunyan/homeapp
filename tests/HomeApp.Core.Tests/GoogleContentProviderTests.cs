@@ -48,6 +48,76 @@ public sealed class GoogleContentProviderTests
     }
 
     [Fact]
+    public async Task Inbox_SkipsInvalidMessageIds_AndFetchesValidEntries()
+    {
+        var paths = new List<string>();
+        using var http = new HttpClient(new Handler((request, _) =>
+        {
+            paths.Add(request.RequestUri!.AbsolutePath);
+            return Task.FromResult(Json(paths.Count == 1 ? """
+                {"messages":[{},null,42,[],{"id":null},{"id":42},{"id":false},
+                  {"id":{}},{"id":[]},{"id":""},{"id":" "},{"id":"valid"}]}
+                """ : """
+                {"id":"valid","internalDate":"1000"}
+                """));
+        }));
+
+        var result = await Provider(http).ReadInboxAsync(20, default);
+
+        Assert.Equal("valid", Assert.Single(result).Id);
+        Assert.Equal(new[] { "/gmail/v1/users/me/messages", "/gmail/v1/users/me/messages/valid" }, paths);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("null")]
+    [InlineData("1000")]
+    [InlineData("false")]
+    [InlineData("{}")]
+    [InlineData("[]")]
+    [InlineData("\"\"")]
+    [InlineData("\"invalid\"")]
+    [InlineData("\"9223372036854775808\"")]
+    [InlineData("\"9223372036854775807\"")]
+    [InlineData("\"-9223372036854775808\"")]
+    [InlineData("\"253402300800000\"")]
+    [InlineData("\"-62135596800001\"")]
+    public async Task Inbox_InvalidDateFallsBack_AndKeepsOtherMessages(string? dateJson)
+    {
+        var calls = 0;
+        var dateProperty = dateJson is null ? "" : ",\"internalDate\":" + dateJson;
+        using var http = new HttpClient(new Handler((_, _) => Task.FromResult(Json(++calls switch
+        {
+            1 => """{"messages":[{"id":"invalid-date"},{"id":"valid"}]}""",
+            2 => "{\"id\":\"invalid-date\"" + dateProperty + "}",
+            _ => """{"id":"valid","internalDate":"1000"}"""
+        }))));
+
+        var result = await Provider(http).ReadInboxAsync(20, default);
+
+        Assert.Equal(3, calls);
+        Assert.Equal(new[] { "valid", "invalid-date" }, result.Select(item => item.Id));
+        Assert.Equal(DateTimeOffset.FromUnixTimeMilliseconds(1000), result[0].ReceivedAt);
+        Assert.Equal(DateTimeOffset.MinValue, result[1].ReceivedAt);
+    }
+
+    [Theory]
+    [InlineData("-62135596800000", -62135596800000L)]
+    [InlineData("0", 0L)]
+    [InlineData("253402300799999", 253402300799999L)]
+    public async Task Inbox_PreservesSupportedDateRange(string date, long expectedMilliseconds)
+    {
+        var calls = 0;
+        using var http = new HttpClient(new Handler((_, _) => Task.FromResult(Json(++calls == 1
+            ? """{"messages":[{"id":"valid"}]}"""
+            : "{\"id\":\"valid\",\"internalDate\":\"" + date + "\"}"))));
+
+        var item = Assert.Single(await Provider(http).ReadInboxAsync(20, default));
+
+        Assert.Equal(DateTimeOffset.FromUnixTimeMilliseconds(expectedMilliseconds), item.ReceivedAt);
+    }
+
+    [Fact]
     public async Task Calendar_FollowsPages_ExpandsRecurrences_PreservesAllDayAndOffsets()
     {
         var urls = new List<string>();

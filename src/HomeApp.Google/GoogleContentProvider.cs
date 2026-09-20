@@ -38,7 +38,9 @@ public sealed class GoogleContentProvider(HttpClient http, Func<CancellationToke
         // Bounded inbox preview; metadata avoids downloading bodies and attachments.
         foreach (var message in messages.EnumerateArray().Take(limit))
         {
-            var id = message.GetProperty("id").GetString()!;
+            if (message.ValueKind != JsonValueKind.Object) continue;
+            var id = String(message, "id");
+            if (string.IsNullOrWhiteSpace(id)) continue;
             using var data = await GetAsync($"{root}/{Uri.EscapeDataString(id)}?format=metadata&metadataHeaders=Subject&metadataHeaders=From", cancellationToken);
             result.Add(ParseMail(data.RootElement));
         }
@@ -81,9 +83,14 @@ public sealed class GoogleContentProvider(HttpClient http, Func<CancellationToke
             return "";
         }
         var subject = Header("Subject");
+        var received = long.TryParse(String(item, "internalDate"), NumberStyles.Integer,
+            CultureInfo.InvariantCulture, out var epoch)
+            && epoch >= DateTimeOffset.MinValue.ToUnixTimeMilliseconds()
+            && epoch <= DateTimeOffset.MaxValue.ToUnixTimeMilliseconds()
+                ? DateTimeOffset.FromUnixTimeMilliseconds(epoch) : DateTimeOffset.MinValue;
         return new(String(item, "id"), subject.Length == 0 ? "（件名なし）" : subject,
             Header("From"), WebUtility.HtmlDecode(String(item, "snippet")),
-            DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(String(item, "internalDate"), CultureInfo.InvariantCulture)),
+            received,
             item.TryGetProperty("labelIds", out var labels) && labels.EnumerateArray().Any(l => l.GetString() == "UNREAD"));
     }
 
