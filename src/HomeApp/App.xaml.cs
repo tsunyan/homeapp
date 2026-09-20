@@ -55,8 +55,7 @@ public partial class App : Application
     {
         try
         {
-            var directory = System.IO.Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HomeApp");
+            var directory = Services.AppDataPaths.WorkspaceDirectory;
             Directory.CreateDirectory(directory);
             File.WriteAllText(System.IO.Path.Combine(directory, "startup-error.txt"), exception.ToString());
         }
