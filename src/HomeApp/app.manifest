@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
   <assemblyIdentity version="1.0.0.0" name="HomeApp.app"/>
+  <msix xmlns="urn:schemas-microsoft-com:msix.v1"
+        publisher="CN=AppPublisher"
+        packageName="878E2E7C-C9C7-4868-BAC8-F51B72AD86B8"
+        applicationId="App" />
 
   <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
     <application>

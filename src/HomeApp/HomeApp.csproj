@@ -50,6 +50,9 @@
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2705" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.4.0" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\HomeApp.Google\HomeApp.Google.csproj" />
+  </ItemGroup>
 
   <!--
     Microsoft.Windows.SDK.BuildTools.WinApp adds first-class support for

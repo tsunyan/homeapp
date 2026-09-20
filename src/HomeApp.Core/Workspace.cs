@@ -18,6 +18,7 @@ public sealed class WidgetState
     public double Height { get; set; } = 300;
     public string Note { get; set; } = "";
     public string Json { get; set; } = SampleData.DefaultJson;
+    public string RssFeedUrl { get; set; } = "";
     public bool ShowSeconds { get; set; }
     public bool Use24HourClock { get; set; } = true;
 
@@ -73,6 +74,7 @@ public sealed class WorkspaceState
                 widget.Title = string.IsNullOrWhiteSpace(widget.Title) ? SampleData.Title(widget.Kind) : widget.Title;
                 widget.Note ??= "";
                 widget.Json ??= SampleData.DefaultJson;
+                widget.RssFeedUrl ??= "";
             }
         }
     }
@@ -141,7 +143,7 @@ public static class LayoutMath
 
     public static void InitialLayout(BoardState board, double availableWidth)
     {
-        var columns = Math.Clamp((int)(availableWidth / 360), 1, 5);
+        var columns = Math.Clamp((int)(availableWidth / 360), 1, 8);
         var width = Math.Clamp((availableWidth - 16 * (columns + 1)) / columns, 280, 520);
         var bottoms = new double[columns];
         Array.Fill(bottoms, 16);
