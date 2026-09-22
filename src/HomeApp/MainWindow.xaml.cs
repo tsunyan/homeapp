@@ -7,7 +7,7 @@ namespace HomeApp;
 
 /// <summary>
 /// The application window. This hosts a Frame that displays pages. Add your
-/// UI and logic to MainPage.xaml / MainPage.xaml.cs instead of here so you
+/// UI and logic to DashboardPage.xaml / DashboardPage.xaml.cs instead of here so you
 /// can use Page features such as navigation events and the Loaded lifecycle.
 /// </summary>
 public sealed partial class MainWindow : Window
@@ -21,7 +21,6 @@ public sealed partial class MainWindow : Window
 
         AppWindow.SetIcon("Assets/AppIcon.ico");
 
-        // Navigate the root frame to the main page on startup.
-        RootFrame.Navigate(typeof(MainPage));
+        RootFrame.Navigate(typeof(DashboardPage));
     }
 }

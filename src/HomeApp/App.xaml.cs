@@ -30,6 +30,7 @@ public partial class App : Application
     public App()
     {
         InitializeComponent();
+        UnhandledException += (_, args) => LogStartupError(args.Exception);
     }
 
     /// <summary>
@@ -38,7 +39,29 @@ public partial class App : Application
     /// <param name="args">Details about the launch request and process.</param>
     protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
     {
-        _window = new MainWindow();
-        _window.Activate();
+        try
+        {
+            _window = new MainWindow();
+            _window.Activate();
+        }
+        catch (Exception ex)
+        {
+            LogStartupError(ex);
+            throw;
+        }
+    }
+
+    private static void LogStartupError(Exception exception)
+    {
+        try
+        {
+            var directory = Services.AppDataPaths.WorkspaceDirectory;
+            Directory.CreateDirectory(directory);
+            File.WriteAllText(System.IO.Path.Combine(directory, "startup-error.txt"), exception.ToString());
+        }
+        catch
+        {
+            // A logging failure must never hide the original startup exception.
+        }
     }
 }

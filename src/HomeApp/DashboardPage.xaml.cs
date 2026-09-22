@@ -31,8 +31,8 @@ public sealed partial class DashboardPage : Page
         InitializeComponent();
 
         // Qualified: Microsoft.UI.Xaml.Shapes.Path is also in scope here.
-        _store = new WorkspaceStore(System.IO.Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HomeApp"));
+        _store = new WorkspaceStore(Services.AppDataPaths.WorkspaceDirectory);
+        _google = new(new Services.EncryptedGoogleStore(System.IO.Path.Combine(_store.DirectoryPath, "GoogleAuth")));
         var loaded = _store.Load();
         _state = loaded.State;
         _pendingWarning = loaded.Warning;
@@ -53,7 +53,7 @@ public sealed partial class DashboardPage : Page
 
     private BoardState Board => _state.ActiveBoard;
 
-    private void OnLoaded(object sender, RoutedEventArgs e)
+    private async void OnLoaded(object sender, RoutedEventArgs e)
     {
         BuildNavigation();
         ApplyTheme();
@@ -64,6 +64,7 @@ public sealed partial class DashboardPage : Page
             Notify(_pendingWarning, InfoBarSeverity.Warning);
             _pendingWarning = null;
         }
+        await RestoreGoogleAsync();
     }
 
     private void Notify(string message, InfoBarSeverity severity = InfoBarSeverity.Informational)
@@ -202,6 +203,10 @@ public sealed partial class DashboardPage : Page
         frame.NoteChanged += (_, _) => QueueSave();
         frame.DetailRequested += async (_, entry) => await ShowDetailAsync(entry);
         frame.JsonEditRequested += async (s, _) => await EditJsonAsync((WidgetFrame)s!);
+        frame.RssSettingsRequested += async (s, _) => await EditRssAsync((WidgetFrame)s!);
+        frame.ConnectionRequested += async (_, _) => await ShowGoogleConnectionAsync();
+        frame.ConnectedDetailRequested += async (_, detail) => await ShowConnectedDetailAsync(detail);
+        frame.SetProviders(_google.Provider, _google.Provider);
         frame.SetEditing(EditButton.IsChecked == true, false);
         BoardCanvas.Children.Add(frame);
         _frames[widget.Id] = frame;
@@ -225,10 +230,20 @@ public sealed partial class DashboardPage : Page
         if (!_state.ShowGrid || EditButton.IsChecked != true) return;
 
         var brush = (Brush)Application.Current.Resources["DividerStrokeColorDefaultBrush"];
-        for (var x = _state.GridSize; x < width; x += _state.GridSize)
-            GridLines.Children.Add(new Line { X1 = x, Y1 = 0, X2 = x, Y2 = height, Stroke = brush, StrokeThickness = .5, Opacity = .4 });
-        for (var y = _state.GridSize; y < height; y += _state.GridSize)
-            GridLines.Children.Add(new Line { X1 = 0, Y1 = y, X2 = width, Y2 = y, Stroke = brush, StrokeThickness = .5, Opacity = .4 });
+        var zoom = LayoutMath.ClampFinite(Viewport.ZoomFactor, .35, 2, 1);
+        var left = Math.Max(0, Viewport.HorizontalOffset / zoom);
+        var top = Math.Max(0, Viewport.VerticalOffset / zoom);
+        var right = Math.Min(width, left + Viewport.ActualWidth / zoom + _state.GridSize);
+        var bottom = Math.Min(height, top + Viewport.ActualHeight / zoom + _state.GridSize);
+        var firstX = Math.Max(_state.GridSize, Math.Floor(left / _state.GridSize) * _state.GridSize);
+        var firstY = Math.Max(_state.GridSize, Math.Floor(top / _state.GridSize) * _state.GridSize);
+
+        // Only draw the visible grid. A widget may live far across the free-form board,
+        // and materializing thousands of off-screen Line elements would stall editing.
+        for (var x = firstX; x < right; x += _state.GridSize)
+            GridLines.Children.Add(new Line { X1 = x, Y1 = top, X2 = x, Y2 = bottom, Stroke = brush, StrokeThickness = .5, Opacity = .4 });
+        for (var y = firstY; y < bottom; y += _state.GridSize)
+            GridLines.Children.Add(new Line { X1 = left, Y1 = y, X2 = right, Y2 = y, Stroke = brush, StrokeThickness = .5, Opacity = .4 });
     }
 
     // ---- selection and inspector ----
@@ -236,7 +251,12 @@ public sealed partial class DashboardPage : Page
     private void Select(WidgetFrame frame)
     {
         _selected = frame;
-        foreach (var other in _frames.Values) other.SetEditing(EditButton.IsChecked == true, other == frame);
+        foreach (var other in _frames.Values)
+        {
+            var selected = other == frame;
+            other.SetEditing(EditButton.IsChecked == true, selected);
+            Canvas.SetZIndex(other, selected ? 1 : 0);
+        }
         SyncInspector(frame);
         InspectorSplit.IsPaneOpen = true;
     }
@@ -509,11 +529,18 @@ public sealed partial class DashboardPage : Page
         panel.Children.Add(theme);
         panel.Children.Add(density);
         panel.Children.Add(grid);
+        var connection = new Button { Content = "Google接続設定" };
+        panel.Children.Add(connection);
 
         // The settings item is not a board; leave the board selection where it was.
         SelectActiveBoardItem();
 
-        if (await NewDialog("表示設定", panel, "適用").ShowAsync() != ContentDialogResult.Primary) return;
+        var dialog = NewDialog("表示設定", panel, "適用");
+        var openConnection = false;
+        connection.Click += (_, _) => { openConnection = true; dialog.Hide(); };
+        var result = await dialog.ShowAsync();
+        if (openConnection) { await ShowGoogleConnectionAsync(); return; }
+        if (result != ContentDialogResult.Primary) return;
 
         _state.Theme = (AppTheme)theme.SelectedIndex;
         _state.Density = (DisplayDensity)density.SelectedIndex;
