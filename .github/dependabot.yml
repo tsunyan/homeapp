@@ -1,9 +1,14 @@
 version: 2
 updates:
-  # The projects under src/ and tests/. global.json pins the SDK and is not
-  # covered here.
+  # The projects under src/ and tests/. There is no solution file, and NuGet
+  # discovery only looks for entry points in the directories it is given, so
+  # `directory: "/"` finds no projects. Each directory gets its own grouped
+  # pull request; no package is referenced from more than one of them.
+  # global.json pins the SDK and is not covered here.
   - package-ecosystem: nuget
-    directory: "/"
+    directories:
+      - "/src/*"
+      - "/tests/*"
     schedule:
       interval: cron
       cronjob: "0 3 * * 3,6" # Wednesday and Saturday, 03:00
